@@ -4,16 +4,7 @@ dotenv
 fastapi
 uvicorn[standard]
 streamlit
-google-generativeai
 python-dotenv
 requests
-Pillow
-boto3
 botocore
-pandas
-pytesseract
-typing-extensions
-python-multipart
-pydantic
-matplotlib
 plotly
