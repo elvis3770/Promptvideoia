@@ -62,7 +62,10 @@ async def text_to_video(
 async def image_to_video(
     prompt: str = Form(...),
     image: UploadFile = File(...),
-    model: str = Form("veo-3.1-fast-generate-preview")
+    model: str = Form("veo-3.1-fast-generate-preview"),
+    duration_seconds: int = Form(8),
+    resolution: str = Form("1080p"),
+    aspect_ratio: str = Form("16:9")
 ):
     try:
         # Read once and log safely
@@ -74,7 +77,7 @@ async def image_to_video(
             raise HTTPException(status_code=400, detail="Uploaded image is empty or unreadable.")
 
         # Generate video (pass bytes directly)
-        payload = generate_image_to_video(prompt, contents, model)
+        payload = generate_image_to_video(prompt, contents, model, resolution, aspect_ratio, duration_seconds)
         return {"ok": True, **payload}
 
     except HTTPException:
@@ -82,7 +85,12 @@ async def image_to_video(
         raise
     except Exception as e:
         logger.exception("Error in /image_to_video")
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e)
+        if "all attempts including REST fallback failed" in error_msg:
+            detail = "Failed to generate video. Please check your image format or try again later."
+        else:
+            detail = f"An error occurred: {error_msg}"
+        raise HTTPException(status_code=500, detail=detail)
 
 # ----------------------------------------------------------------------
 # USING REFERENCE IMAGES
@@ -91,6 +99,9 @@ async def image_to_video(
 async def video_from_reference_images(
     prompt: str = Form(...),
     reference_images: List[UploadFile] = File(...),
+    duration_seconds: int = Form(8),
+    resolution: str = Form("1080p"),
+    aspect_ratio: str = Form("16:9")
 ):
     """
     Generate a video using multiple reference images + prompt.
@@ -109,6 +120,9 @@ async def video_from_reference_images(
             prompt=prompt,
             images=image_bytes_list,
             model = SUPPORTED_MODEL,
+            resolution=resolution,
+            aspect_ratio=aspect_ratio,
+            duration_seconds=duration_seconds,
         )
         return {"ok": True, **result}
     except HTTPException:
@@ -124,6 +138,9 @@ async def video_from_first_last_frames(
     prompt: str = Form(...),
     first_frame: UploadFile = File(...),
     last_frame: UploadFile = File(...),
+    duration_seconds: int = Form(8),
+    resolution: str = Form("1080p"),
+    aspect_ratio: str = Form("16:9")
 ):
     """
     Generate a video using first + last frame images + prompt.
@@ -146,6 +163,9 @@ async def video_from_first_last_frames(
             first=first_bytes,
             last=last_bytes,
             model = SUPPORTED_MODEL,
+            resolution=resolution,
+            aspect_ratio=aspect_ratio,
+            duration_seconds=duration_seconds,
         )
         return {"ok": True, **result}
     except HTTPException:
@@ -160,10 +180,13 @@ async def extend_veo_video_endpoint(
     prompt: str = Form(...),
     base_video: UploadFile = File(...),
     model: str = Form("veo-3.1-fast-generate-preview"),
+    duration_seconds: int = Form(8),
+    resolution: str = Form("1080p"),
+    aspect_ratio: str = Form("16:9")
 ):
     try:
         video_bytes = await base_video.read()
-        payload = extend_veo_video(prompt, video_bytes, model)
+        payload = extend_veo_video(prompt, video_bytes, model, resolution=resolution, aspect_ratio=aspect_ratio, duration_seconds=duration_seconds)
         return {"ok": True, **payload}
     except Exception as e:
         logger.exception("Error in /extend_veo_video")

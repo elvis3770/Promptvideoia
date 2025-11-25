@@ -38,7 +38,7 @@ def create_genai_client():
     if genai is None:
         raise RuntimeError("google-genai SDK not installed. Install via: pip install google-genai")
 
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GENAI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     project = os.getenv("GOOGLE_CLOUD_PROJECT")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 
@@ -295,7 +295,7 @@ def generate_text_to_video(prompt: str, model: str, resolution: str, aspect_rati
     logger.info(f"Operation started: {operation_name} ({type(op)})")
     return {"operation_name": operation_name, "message": "text-to-video operation started"}
 
-def generate_image_to_video(prompt: str, image_bytes: bytes, model: str) -> Dict[str, Any]:
+def generate_image_to_video(prompt: str, image_bytes: bytes, model: str, resolution: str = "1080p", aspect_ratio: str = "16:9", duration_seconds: int = 8) -> Dict[str, Any]:
     """
     Introspection-guided image->video generation. Tries direct base64 payloads and typed constructors,
     then falls back to upload-then-generate. If all fail, dumps SDK schema via dump_generate_videos_schema().
@@ -305,9 +305,9 @@ def generate_image_to_video(prompt: str, image_bytes: bytes, model: str) -> Dict
 
     # prepare config defensively
     try:
-        cfg = types.GenerateVideosConfig() if types and hasattr(types, "GenerateVideosConfig") else {}
+        cfg = types.GenerateVideosConfig(resolution=resolution, aspect_ratio=aspect_ratio, duration_seconds=str(duration_seconds))
     except Exception:
-        cfg = {}
+        cfg = {"resolution": resolution, "aspect_ratio": aspect_ratio, "duration_seconds": str(duration_seconds)}
 
     # guess mime
     mime_type = "image/jpeg"
@@ -539,6 +539,9 @@ def generate_video_from_reference_images(
     prompt: str,
     images: List[bytes],
     model: str,
+    resolution: str = "1080p",
+    aspect_ratio: str = "16:9",
+    duration_seconds: int = 8,
 ) -> Dict[str, Any]:
     """
     Fallback: call the Generative Language REST long-running endpoint directly
@@ -611,7 +614,11 @@ def generate_video_from_reference_images(
 
     body = {
         "instances": [instance],
-        # Optional "parameters": {...} can go here (durationSeconds, aspectRatio, etc.)
+        "parameters": {
+            "aspectRatio": aspect_ratio,
+            "durationSeconds": duration_seconds,
+            # "resolution": resolution # resolution might not be supported in REST parameters for all models, but we can try
+        }
     }
 
     try:
@@ -660,6 +667,9 @@ def generate_video_from_first_last_frames(
     first: bytes,
     last: bytes,
     model: str,
+    resolution: str = "1080p",
+    aspect_ratio: str = "16:9",
+    duration_seconds: int = 8,
 ) -> Dict[str, Any]:
     """
     Call the Generative Language REST long-running endpoint directly
@@ -733,7 +743,10 @@ def generate_video_from_first_last_frames(
 
     body = {
         "instances": [instance],
-        # Optionally add "parameters": {"duration": 8, "aspectRatio": "16:9"} etc.
+        "parameters": {
+            "aspectRatio": aspect_ratio,
+            "durationSeconds": duration_seconds,
+        }
     }
 
     try:
@@ -849,7 +862,7 @@ def _try_construct_typed_video(candidate_cls, uploaded_or_file_obj):
     # If we arrive here, we could not construct
     raise RuntimeError(f"_try_construct_typed_video failed for {candidate_cls} last_exc={last_exc}")
 
-def extend_veo_video(prompt: str, video_bytes: bytes, model: str, prior_generated_video_obj: Optional[Any] = None) -> Dict[str, Any]:
+def extend_veo_video(prompt: str, video_bytes: bytes, model: str, prior_generated_video_obj: Optional[Any] = None, resolution: str = "1080p", aspect_ratio: str = "16:9", duration_seconds: int = 8) -> Dict[str, Any]:
     """
     Attempt to extend a video.
 
@@ -1091,7 +1104,8 @@ def download_video_bytes(operation_name: str) -> Tuple[Optional[bytes], Optional
                 op = client.operations.get(types.GenerateVideosOperation(name=operation_name))
             else:
                 raise
-        except Exception:
+        except Exception as e:
+            logger.error(f"download_video_bytes: failed to get operation: {e}")
             return None, None
 
     if isinstance(op, str):
@@ -1099,29 +1113,128 @@ def download_video_bytes(operation_name: str) -> Tuple[Optional[bytes], Optional
         return None, None
 
     if not bool(getattr(op, "done", False)):
+        logger.info(f"download_video_bytes: operation {operation_name} not done yet")
         return None, None
 
     resp = getattr(op, "response", None) or getattr(op, "result", None)
     if not resp:
+        logger.info(f"download_video_bytes: operation {operation_name} has no response/result")
         return None, None
 
     videos = getattr(resp, "generated_videos", None)
     if not videos:
+        logger.info(f"download_video_bytes: operation {operation_name} has no generated_videos")
         return None, None
 
     video_obj = videos[0]
     try:
         downloaded = client.files.download(file=video_obj.video)
-    except Exception:
+    except Exception as e1:
+        logger.warning(f"download_video_bytes: first download attempt failed: {e1}")
         try:
             downloaded = client.files.download(video_obj.video)
-        except Exception:
+        except Exception as e2:
+            logger.error(f"download_video_bytes: second download attempt failed: {e2}")
             return None, None
 
     if hasattr(downloaded, "read"):
         data = downloaded.read()
     else:
         data = bytes(downloaded)
-
     filename = f"video_{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}.mp4"
     return data, filename
+
+def generate_image_to_video_rest(prompt: str, image_bytes: bytes, model: str) -> Dict[str, Any]:
+    """
+    Fallback: call the Generative Language REST long-running endpoint directly
+    to start a Veo job using a single image + a text prompt.
+    """
+    api_key = (
+        os.getenv("GEMINI_API_KEY")
+        or os.getenv("GENAI_API_KEY")
+        or os.getenv("GOOGLE_API_KEY")
+    )
+    if not api_key:
+        raise RuntimeError(
+            "No GEMINI_API_KEY/GENAI_API_KEY/GOOGLE_API_KEY set in environment "
+            "for REST image-to-video call"
+        )
+
+    if not image_bytes:
+        raise RuntimeError("generate_image_to_video_rest: no image provided")
+
+    # Build URL for predictLongRunning
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:predictLongRunning"
+    params = {"key": api_key}
+    headers = {"Content-Type": "application/json"}
+
+    # minimal mime type guessing
+    mime_type = "image/jpeg"
+    try:
+        if image_bytes[:8].startswith(b"\x89PNG\r\n\x1a\n"):
+            mime_type = "image/png"
+        elif image_bytes[:2] == b"\xff\xd8":
+            mime_type = "image/jpeg"
+        elif image_bytes[:4] == b"RIFF":
+            mime_type = "image/webp"
+    except Exception:
+        pass
+
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+
+    # Build instance
+    instance = {
+        "prompt": prompt,
+        "image": {
+            "bytesBase64Encoded": b64,
+            "mimeType": mime_type,
+        }
+    }
+
+    body = {
+        "instances": [instance],
+        "parameters": {
+            "aspectRatio": "16:9",   # Default, can be parameterized if needed
+            "durationSeconds": 8     # Default
+        }
+    }
+
+    try:
+        logger.info(
+            "generate_image_to_video_rest: POST %s (model=%s)",
+            url,
+            model,
+        )
+        resp = requests.post(
+            url,
+            params=params,
+            headers=headers,
+            data=json.dumps(body),
+            timeout=300,
+        )
+    except requests.RequestException as e:
+        logger.exception("generate_image_to_video_rest: HTTP request failed")
+        raise RuntimeError(f"REST request failed: {e}")
+
+    # Parse response JSON
+    try:
+        j = resp.json()
+    except Exception:
+        raise RuntimeError(
+            f"REST call returned non-JSON: status={resp.status_code} text={resp.text}"
+        )
+
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(
+            f"REST predictLongRunning (image-to-video) failed: "
+            f"status={resp.status_code} body={j}"
+        )
+
+    op_name = j.get("name") or j.get("operation") or j.get("operation_name")
+    if not op_name:
+        raise RuntimeError(
+            f"REST (image-to-video) succeeded but no operation name returned: {j}"
+        )
+
+    logger.info("generate_image_to_video_rest: started operation %s", op_name)
+    return {"operation_name": op_name, "message": "image-to-video operation started (via REST)"}

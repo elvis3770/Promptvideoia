@@ -8,6 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+.env
+node_modules/
 .streamlit/secrets.toml
 
 # FFmpeg builds and binaries
