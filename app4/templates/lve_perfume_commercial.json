@@ -1,0 +1,165 @@
+{
+  "project_id": "lve_perfume_commercial_001",
+  "name": "LVE Perfume - Elegancia en Rojo",
+  "duration_target": 30,
+  "description": "Comercial de lujo para perfume LVE protagonizado por modelo elegante en vestido rojo",
+  
+  "subject": {
+    "type": "person",
+    "name": "Modelo Principal",
+    "description": "elegant woman with long dark hair wearing a flowing red evening dress",
+    "reference_images": [],
+    "consistency_id": "subject_lve_001",
+    "characteristics": [
+      "confident posture",
+      "graceful movements",
+      "mysterious smile",
+      "sophisticated appearance"
+    ]
+  },
+  
+  "product": {
+    "name": "LVE Perfume",
+    "description": "luxury perfume bottle with gold accents and red liquid, elegant minimalist design",
+    "reference_images": [],
+    "consistency_id": "product_lve_001",
+    "brand_colors": ["red", "gold", "black"]
+  },
+  
+  "brand_guidelines": {
+    "mood": "luxury, elegance, mystery, sophistication",
+    "color_palette": ["deep red", "warm gold", "soft black", "cream white"],
+    "lighting_style": "warm, cinematic, golden hour",
+    "music_style": "orchestral, elegant, building tension"
+  },
+  
+  "scenes": [
+    {
+      "scene_id": 1,
+      "name": "Entrada Elegante",
+      "duration": 8,
+      "prompt_template": "{{subject}} walking gracefully through {{setting}}, {{camera_movement}}, {{lighting}}, elegant and confident",
+      "variables": {
+        "setting": "luxurious hotel lobby with white marble floors and floor-to-ceiling windows",
+        "camera_movement": "smooth tracking shot following from behind, slow dolly forward",
+        "lighting": "warm golden hour sunlight streaming through windows, soft shadows"
+      },
+      "emotion": "confident, powerful, elegant",
+      "camera_specs": {
+        "angle": "medium full shot",
+        "movement": "dolly forward + tracking",
+        "speed": "slow and steady",
+        "focal_length": "35mm"
+      },
+      "action_details": "Model walks with flowing dress movement, hair gently moving, confident stride",
+      "continuity_mode": "initial"
+    },
+    
+    {
+      "scene_id": 2,
+      "name": "Revelación del Perfume",
+      "duration": 8,
+      "prompt_template": "{{subject}} turns gracefully towards camera with {{emotion}}, {{camera_movement}}, revealing {{product}} in her hand, {{lighting}}",
+      "variables": {
+        "emotion": "mysterious smile, captivating gaze",
+        "camera_movement": "slow zoom in to medium close-up",
+        "lighting": "soft key light on face, rim light on hair, product highlighted"
+      },
+      "emotion": "mysterious, alluring, confident",
+      "camera_specs": {
+        "angle": "medium close-up transitioning to close-up",
+        "movement": "slow zoom in",
+        "speed": "very slow",
+        "focal_length": "50mm"
+      },
+      "action_details": "Smooth turn, dress flowing, hand elegantly presenting perfume bottle, eye contact with camera",
+      "continuity_mode": "last_frame_reference",
+      "product_focus": true
+    },
+    
+    {
+      "scene_id": 3,
+      "name": "Momento Íntimo",
+      "duration": 7,
+      "prompt_template": "Close-up of {{subject}} applying {{product}} to her neck, {{emotion}}, {{lighting}}, sensual and elegant moment",
+      "variables": {
+        "emotion": "eyes closed, serene expression, enjoying the moment",
+        "lighting": "soft diffused lighting, warm tones, focus on face and product"
+      },
+      "emotion": "sensual, peaceful, luxurious",
+      "camera_specs": {
+        "angle": "close-up",
+        "movement": "subtle push in",
+        "speed": "very slow",
+        "focal_length": "85mm"
+      },
+      "action_details": "Delicate application of perfume, graceful hand movement, eyes closed in pleasure",
+      "continuity_mode": "last_frame_reference",
+      "product_focus": true
+    },
+    
+    {
+      "scene_id": 4,
+      "name": "Final Poderoso",
+      "duration": 7,
+      "prompt_template": "{{subject}} with {{emotion}}, {{camera_movement}}, {{product}} prominently displayed, {{lighting}}, ending with brand reveal",
+      "variables": {
+        "emotion": "powerful confident gaze directly at camera",
+        "camera_movement": "slow pull back to reveal full scene",
+        "lighting": "dramatic lighting, spotlight on subject and product, dark elegant background"
+      },
+      "emotion": "powerful, confident, commanding",
+      "camera_specs": {
+        "angle": "medium shot",
+        "movement": "slow dolly back",
+        "speed": "slow",
+        "focal_length": "50mm"
+      },
+      "action_details": "Model holds perfume bottle at chest level, direct eye contact, dress and hair perfectly styled",
+      "continuity_mode": "last_frame_reference",
+      "product_focus": true,
+      "end_card": {
+        "show": true,
+        "text": "LVE - Elegancia Infinita",
+        "duration": 2
+      }
+    }
+  ],
+  
+  "refinement_settings": {
+    "iterations": 2,
+    "focus_areas": [
+      "subject_consistency",
+      "product_visibility",
+      "lighting_coherence",
+      "emotional_progression"
+    ],
+    "quality_checks": [
+      "dress_color_consistency",
+      "product_appearance_match",
+      "lighting_continuity",
+      "motion_smoothness"
+    ]
+  },
+  
+  "technical_specs": {
+    "resolution": "1080p",
+    "aspect_ratio": "16:9",
+    "model": "veo-3.1-generate-preview",
+    "frame_rate": 24,
+    "color_grading": "warm, cinematic, luxury commercial"
+  },
+  
+  "post_production": {
+    "transitions": {
+      "type": "crossfade",
+      "duration": 0.5
+    },
+    "color_correction": true,
+    "audio": {
+      "music": "elegant orchestral piece",
+      "sound_effects": ["subtle dress rustle", "perfume spray sound"],
+      "voiceover": null
+    }
+  }
+}

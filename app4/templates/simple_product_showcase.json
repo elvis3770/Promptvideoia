@@ -1,0 +1,51 @@
+{
+    "project_id": "simple_product_showcase_001",
+    "name": "Simple Product Showcase",
+    "duration_target": 15,
+    "description": "Showcase simple y directo de producto con 2 escenas",
+    "subject": {
+        "type": "product",
+        "description": "modern smartphone with sleek black design and edge-to-edge display",
+        "reference_images": []
+    },
+    "product": {
+        "name": "TechPro X1",
+        "category": "technology",
+        "key_features": [
+            "5G connectivity",
+            "AI camera",
+            "all-day battery"
+        ]
+    },
+    "brand_guidelines": {
+        "mood": "modern, innovative, clean",
+        "color_palette": [
+            "black",
+            "silver",
+            "blue accent"
+        ],
+        "style": "minimalist, tech-forward"
+    },
+    "scenes": [
+        {
+            "scene_id": 0,
+            "name": "Product Reveal",
+            "duration": 7.5,
+            "prompt": "sleek black smartphone rotating slowly on white pedestal, studio lighting with blue accent lights, minimalist background, product photography style, 4K quality",
+            "emotion": "neutral",
+            "camera_movement": "slow_pan",
+            "lighting": "studio",
+            "reference_images": []
+        },
+        {
+            "scene_id": 1,
+            "name": "Feature Highlight",
+            "duration": 7.5,
+            "prompt": "close-up of smartphone screen displaying vibrant interface, finger swiping through apps smoothly, soft studio lighting, modern and clean aesthetic, professional product video",
+            "emotion": "excitement",
+            "camera_movement": "dolly_in",
+            "lighting": "soft",
+            "reference_images": []
+        }
+    ]
+}

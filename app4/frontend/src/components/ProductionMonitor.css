@@ -1,0 +1,250 @@
+/* Production Monitor Styles */
+.production-monitor {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.monitor-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.monitor-header svg {
+    color: #3b82f6;
+}
+
+.monitor-header h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1f2937;
+}
+
+.monitor-header p {
+    color: #6b7280;
+    margin: 0;
+}
+
+.monitor-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.status-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.status-card h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem 0;
+}
+
+.status-indicator {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    text-align: center;
+    font-size: 1.125rem;
+    letter-spacing: 0.05em;
+}
+
+.status-running {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-failed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-unknown {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 0.5rem;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #3b82f6;
+    transition: width 0.3s ease;
+}
+
+.scenes-list {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.scenes-list h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #1f2937;
+}
+
+.scene-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+}
+
+.scene-item:last-child {
+    margin-bottom: 0;
+}
+
+.scene-number {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 50%;
+    font-weight: 700;
+    color: #4b5563;
+}
+
+.scene-info {
+    flex: 1;
+}
+
+.scene-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #1f2937;
+}
+
+.scene-info p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.scene-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.scene-completed {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.scene-generating {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.scene-failed {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.icon-success {
+    color: #10b981;
+}
+
+.icon-loading {
+    color: #3b82f6;
+}
+
+.icon-error {
+    color: #ef4444;
+}
+
+.icon-pending {
+    color: #6b7280;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error-message,
+.success-message {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.error-message {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.success-message {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #065f46;
+}
+
+.error-message h4,
+.success-message h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+
+.error-message p,
+.success-message p {
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0 0;
+}
+
+.monitor-loading {
+    text-align: center;
+    padding: 4rem;
+    color: #6b7280;
+}

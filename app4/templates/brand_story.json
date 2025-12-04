@@ -1,0 +1,61 @@
+{
+    "project_id": "brand_story_001",
+    "name": "Brand Story - Artisan Coffee",
+    "duration_target": 22,
+    "description": "Historia de marca para café artesanal, desde el grano hasta la taza",
+    "subject": {
+        "type": "person",
+        "description": "skilled barista with warm smile, wearing apron, working with coffee equipment",
+        "reference_images": []
+    },
+    "product": {
+        "name": "Artisan Coffee Co.",
+        "category": "food & beverage",
+        "key_features": [
+            "organic beans",
+            "handcrafted",
+            "sustainable"
+        ]
+    },
+    "brand_guidelines": {
+        "mood": "warm, authentic, artisanal, inviting",
+        "color_palette": [
+            "warm brown",
+            "cream",
+            "natural wood tones"
+        ],
+        "style": "documentary-style, authentic, human-centered"
+    },
+    "scenes": [
+        {
+            "scene_id": 0,
+            "name": "The Beans",
+            "duration": 7,
+            "prompt": "close-up of coffee beans being poured into wooden bowl, warm morning sunlight, rustic wooden table, steam rising gently, artisanal and organic aesthetic, shallow depth of field",
+            "emotion": "calm",
+            "camera_movement": "static",
+            "lighting": "natural",
+            "reference_images": []
+        },
+        {
+            "scene_id": 1,
+            "name": "The Craft",
+            "duration": 7.5,
+            "prompt": "skilled barista carefully pouring steamed milk creating latte art, focused expression, cozy coffee shop interior, warm ambient lighting, professional craftsmanship, medium shot",
+            "emotion": "joy",
+            "camera_movement": "slow_pan",
+            "lighting": "soft",
+            "reference_images": []
+        },
+        {
+            "scene_id": 2,
+            "name": "The Experience",
+            "duration": 7.5,
+            "prompt": "customer holding beautiful latte with perfect foam art, sitting by window with natural light, steam rising from cup, content smile, cozy atmosphere, warm and inviting scene",
+            "emotion": "joy",
+            "camera_movement": "dolly_in",
+            "lighting": "golden_hour",
+            "reference_images": []
+        }
+    ]
+}
