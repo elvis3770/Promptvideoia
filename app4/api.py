@@ -5,6 +5,11 @@ from __future__ import annotations
 
 import sys
 import os
+
+# Load .env file FIRST before any other imports
+from dotenv import load_dotenv
+load_dotenv()
+
 # Agregar el directorio actual al PYTHONPATH para que Python encuentre el paquete 'backend'
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -29,7 +34,7 @@ try:
     from backend.models.models import PromptOptimizationConfig
     AGENT_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️  Agente de optimización no disponible: {e}")
+    print(f"[WARN] Optimization agent not available: {e}")
     AGENT_AVAILABLE = False
 
 app = FastAPI(
@@ -42,6 +47,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost:5175",  # Current frontend port
+        "http://127.0.0.1:5175",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
         "http://localhost:3000",
@@ -52,8 +59,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global orchestrator
-orchestrator = ProductionOrchestrator()
+# Global orchestrator - initialized lazily to prevent blocking
+orchestrator = None
+
+def get_orchestrator():
+    global orchestrator
+    if orchestrator is None:
+        orchestrator = ProductionOrchestrator()
+    return orchestrator
 
 # Active productions tracking
 active_productions: dict[str, dict[str]] = {}
@@ -66,13 +79,13 @@ active_productions: dict[str, dict[str]] = {}
 async def startup():
     """Connect to database on startup"""
     await db.connect()
-    print("✅ API started and connected to MongoDB")
+    print("[OK] API started and connected to MongoDB")
 
 @app.on_event("shutdown")
 async def shutdown():
     """Close database connection on shutdown"""
     await db.close()
-    print("👋 API shutdown")
+    print("[BYE] API shutdown")
 
 # ============================================================
 # MODELS
@@ -407,13 +420,20 @@ async def optimize_prompt(data: PromptOptimizationRequest):
                 }
             }
         
-        # Inicializar agente
+        # Inicializar agente con modo local WebAI
+        print("[DEBUG] Creating PromptEngineerAgent...")
+        import sys; sys.stdout.flush()
+        
         config = PromptOptimizationConfig()
+        model_name = str("gemini-3.0-pro")  # Force pure string, confirmed available
         agent = PromptEngineerAgent(
-            api_key=api_key,
-            model_name=config.gemini_model,
-            target_video_model=config.model_type
+            api_key=str(api_key),  # Force string
+            model_name=model_name,
+            target_video_model=str(config.model_type),  # Force string
+            use_local=True,
+            webai_base_url=str("http://localhost:6969/v1")  # Force string
         )
+        print(f"[DEBUG] Agent created with model: {model_name}")
         
         # Crear template mínimo
         minimal_template = {
@@ -448,22 +468,34 @@ async def optimize_prompt(data: PromptOptimizationRequest):
             "dialogue": data.dialogue or ""
         }
         
+        print("[DEBUG] About to call agent.refine_prompt...")
+        import sys; sys.stdout.flush()
+        
         optimized_data = await agent.refine_prompt(
             user_input=user_input,
             master_template=minimal_template,
             scene=scene
         )
         
-        # Generar preview
-        preview = agent.get_optimization_preview(user_input, optimized_data)
+        print("[DEBUG] refine_prompt completed!")
         
+        # Return optimized data directly
         return {
             "ok": True,
-            "optimized": optimized_data,
-            "preview": preview
+            "optimized": {
+                "action": optimized_data.get("optimized_action", user_input["action"]),
+                "emotion": optimized_data.get("optimized_emotion", user_input["emotion"]),
+                "dialogue": optimized_data.get("optimized_dialogue", ""),
+                "keywords": optimized_data.get("technical_keywords", [])
+            },
+            "validation": optimized_data.get("validation", {}),
+            "used_local_server": optimized_data.get("optimization_metadata", {}).get("used_local_server", False)
         }
         
     except Exception as e:
+        print(f"[ERROR] Optimization failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Optimization error: {str(e)}")
 
 @app.post("/api/prompts/validate")
@@ -534,3 +566,4 @@ if __name__ == "__main__":
         port=8003,
         reload=True
     )
+

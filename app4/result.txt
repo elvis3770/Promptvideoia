@@ -1,0 +1,41 @@
+﻿
+============================================================
+python : Traceback (most 
+recent call last):
+En línea: 1 Carácter: 1
++ python verify_env.py 2>&1 
+| Out-File -Encoding utf8 
+result.txt; Get-C ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (Traceba  
+  ck (most recent call las   
+ t)::String) [], RemoteEx    
+ception
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+  File "C:\Users\Admin\Videos
+\videos 80s\prompt\Video-gene
+ration-Veo-3.1\app4\verify_en
+v.py", line 17, in <module>
+    print("\U0001f4cb 
+Environment Configuration 
+Verification")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Admin\AppDat
+a\Local\Programs\Python\Pytho
+n313\Lib\encodings\cp1252.py"
+, line 19, in encode
+    return codecs.charmap_enc
+ode(input,self.errors,encodin
+g_table)[0]
+           ~~~~~~~~~~~~~~~~~~
+~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^
+UnicodeEncodeError: 
+'charmap' codec can't encode 
+character '\U0001f4cb' in 
+position 0: character maps 
+to <undefined>

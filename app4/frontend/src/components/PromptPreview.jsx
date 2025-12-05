@@ -15,12 +15,28 @@ const PromptPreview = ({ preview, onAccept, onReject, loading }) => {
         return null;
     }
 
-    const { comparison, keywords_added, coherence_score, validation_notes, issues } = preview;
+    // Handle both old and new response formats
+    const comparison = preview.comparison || {};
+    const coherence_score = preview.coherence_score || preview.validation?.confidence_score || 0.8;
+    const keywords_added = preview.keywords_added || preview.optimized?.keywords || [];
+    const validation_notes = preview.validation_notes || preview.validation?.notes || '';
+    const issues = preview.issues || preview.validation?.issues || [];
+
+    // If we have direct optimized data, construct comparison from it
+    const actionComparison = comparison.action || {
+        original: preview.original?.action || 'N/A',
+        optimized: preview.optimized?.action || 'N/A',
+        improvement: 0
+    };
+    const emotionComparison = comparison.emotion || {
+        original: preview.original?.emotion || 'N/A',
+        optimized: preview.optimized?.emotion || 'N/A'
+    };
 
     return (
         <div className="prompt-preview">
             <div className="preview-header">
-                <h3>🤖 Optimización de Prompt con IA</h3>
+                <h3>IA Optimization</h3>
                 <div className="coherence-badge">
                     <span className="score-label">Coherencia:</span>
                     <span className={`score-value ${getScoreClass(coherence_score)}`}>
@@ -31,18 +47,18 @@ const PromptPreview = ({ preview, onAccept, onReject, loading }) => {
 
             {/* Comparación de Acción */}
             <div className="comparison-section">
-                <h4>Acción</h4>
+                <h4>Accion</h4>
                 <div className="comparison-grid">
                     <div className="original">
                         <label>Original:</label>
-                        <p className="text-content">{comparison.action.original}</p>
+                        <p className="text-content">{actionComparison.original}</p>
                     </div>
                     <div className="optimized">
-                        <label>Optimizado: ✨</label>
-                        <p className="text-content highlighted">{comparison.action.optimized}</p>
-                        {comparison.action.improvement > 0 && (
+                        <label>Optimizado:</label>
+                        <p className="text-content highlighted">{actionComparison.optimized}</p>
+                        {actionComparison.improvement > 0 && (
                             <span className="improvement-badge">
-                                +{comparison.action.improvement} keywords técnicas
+                                +{actionComparison.improvement} keywords tecnicas
                             </span>
                         )}
                     </div>
@@ -51,31 +67,31 @@ const PromptPreview = ({ preview, onAccept, onReject, loading }) => {
 
             {/* Comparación de Emoción */}
             <div className="comparison-section">
-                <h4>Emoción</h4>
+                <h4>Emocion</h4>
                 <div className="comparison-grid">
                     <div className="original">
                         <label>Original:</label>
-                        <p className="text-content">{comparison.emotion.original}</p>
+                        <p className="text-content">{emotionComparison.original}</p>
                     </div>
                     <div className="optimized">
-                        <label>Optimizado: ✨</label>
-                        <p className="text-content highlighted">{comparison.emotion.optimized}</p>
+                        <label>Optimizado:</label>
+                        <p className="text-content highlighted">{emotionComparison.optimized}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Diálogo (si existe) */}
-            {comparison.dialogue && comparison.dialogue.original && (
+            {/* Dialogo (si existe) */}
+            {preview.optimized?.dialogue && preview.optimized.dialogue !== 'N/A' && (
                 <div className="comparison-section">
-                    <h4>Diálogo</h4>
+                    <h4>Dialogo</h4>
                     <div className="comparison-grid">
                         <div className="original">
                             <label>Original:</label>
-                            <p className="text-content">"{comparison.dialogue.original}"</p>
+                            <p className="text-content">"{preview.original?.dialogue || 'N/A'}"</p>
                         </div>
                         <div className="optimized">
-                            <label>Optimizado: ✨</label>
-                            <p className="text-content highlighted">"{comparison.dialogue.optimized}"</p>
+                            <label>Optimizado:</label>
+                            <p className="text-content highlighted">"{preview.optimized.dialogue}"</p>
                         </div>
                     </div>
                 </div>

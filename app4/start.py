@@ -19,13 +19,13 @@ def print_header(text):
     print("=" * 60 + "\n")
 
 def print_step(text):
-    print(f"➤ {text}")
+    print(f">> {text}")
 
 def print_success(text):
-    print(f"✅ {text}")
+    print(f"[OK] {text}")
 
 def print_error(text):
-    print(f"❌ {text}")
+    print(f"[ERROR] {text}")
 
 def check_mongodb():
     """Check if MongoDB is running"""
@@ -49,11 +49,9 @@ def start_backend():
     
     try:
         backend_process = subprocess.Popen(
-            ["py", "-3.11", "api.py"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1
+            [sys.executable, "-m", "uvicorn", "api:app", "--port", "8003", "--host", "127.0.0.1"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
         time.sleep(2)  # Give it time to start
         
@@ -124,7 +122,7 @@ def cleanup():
             frontend_process.kill()
             print_success("Frontend forzado a cerrar")
     
-    print("\n👋 App4 cerrado")
+    print("\n[BYE] App4 cerrado")
 
 def signal_handler(sig, frame):
     """Handle Ctrl+C"""

@@ -27,7 +27,7 @@ class Database:
             
             # Create indexes
             await self.create_indexes()
-            print("✅ Connected to MongoDB")
+            print("[OK] Connected to MongoDB")
     
     async def create_indexes(self):
         """Create indexes for optimized queries"""
@@ -51,7 +51,7 @@ class Database:
         """Close database connection"""
         if self.client:
             self.client.close()
-            print("✅ MongoDB connection closed")
+            print("[OK] MongoDB connection closed")
 
 # Global database instance
 db = Database()

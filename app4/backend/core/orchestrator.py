@@ -40,23 +40,33 @@ class ProductionOrchestrator:
         if self.optimization_config.use_agent:
             api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
             if api_key:
+                # WebAI-to-API configuration
+                use_local = os.getenv("USE_LOCAL_GEMINI", "false").lower() == "true"
+                webai_url = os.getenv("WEBAI_API_BASE_URL", "http://localhost:6969/v1")
+                
                 self.prompt_agent = PromptEngineerAgent(
                     api_key=api_key,
                     model_name=self.optimization_config.gemini_model,
-                    target_video_model=self.optimization_config.model_type
+                    target_video_model=self.optimization_config.model_type,
+                    use_local=use_local,
+                    webai_base_url=webai_url
                 )
                 self.prompt_validator = PromptValidator()
                 self.prompt_optimizer = PromptOptimizer(
                     model_type=self.optimization_config.model_type
                 )
-                print("✨ Prompt optimization agent enabled")
+                
+                if use_local:
+                    print(f"[OK] Prompt optimization agent enabled with LOCAL WebAI server: {webai_url}")
+                else:
+                    print("[OK] Prompt optimization agent enabled with OFFICIAL Google API")
             else:
-                print("⚠️  GEMINI_API_KEY not found, disabling agent")
+                print("[WARN] GEMINI_API_KEY not found, disabling agent")
                 self.optimization_config.use_agent = False
                 self.prompt_agent = None
         else:
             self.prompt_agent = None
-            print("ℹ️  Prompt optimization agent disabled")
+            print("[INFO] Prompt optimization agent disabled")
         
         self.projects_dir = os.getenv("PROJECTS_DIR", "./projects")
         self.temp_dir = os.getenv("TEMP_DIR", "./temp")

@@ -1,6 +1,10 @@
 """
 Prompt Engineer Agent - Agente de Gemini para optimización de prompts
 Actúa como capa de refinamiento entre entrada del usuario y generación de video
+
+Supports both:
+- Local WebAI-to-API server (cost-free, no rate limits)
+- Official Google Gemini API (fallback)
 """
 from __future__ import annotations
 import google.generativeai as genai
@@ -8,6 +12,9 @@ import json
 import logging
 from typing import Optional
 from datetime import datetime
+
+# Import local WebAI client
+from .webai_client import WebAIClient
 
 logger = logging.getLogger(__name__)
 
@@ -21,31 +28,52 @@ class PromptEngineerAgent:
     - Validar coherencia entre acción, emoción y tono del producto
     - Optimizar keywords para Veo 3.1
     - Ajustar tono y acento del diálogo
+    
+    Supports two modes:
+    - Local mode: Uses WebAI-to-API server (localhost:6969)
+    - Official mode: Uses Google Gemini API directly
     """
     
     def __init__(
         self,
         api_key: str,
         model_name: str = "gemini-2.0-flash-exp",
-        target_video_model: str = "veo-3.1"
+        target_video_model: str = "veo-3.1",
+        use_local: bool = False,
+        webai_base_url: str = "http://localhost:6969/v1"
     ):
         """
         Inicializa el agente con configuración de Gemini
         
         Args:
-            api_key: API key de Google Gemini
+            api_key: API key de Google Gemini (required even for local mode as fallback)
             model_name: Modelo de Gemini a usar
             target_video_model: Modelo de video target (veo-3.1, runway, etc)
+            use_local: If True, use WebAI-to-API local server
+            webai_base_url: Base URL of WebAI-to-API server
         """
         self.api_key = api_key
         self.model_name = model_name
         self.target_video_model = target_video_model
+        self.use_local = use_local
+        self.webai_base_url = webai_base_url
         
-        # Configurar Gemini
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+        # Initialize clients
+        if use_local:
+            logger.info(f"[LOCAL] Initializing with LOCAL WebAI-to-API server: {webai_base_url}")
+            self.webai_client = WebAIClient(base_url=webai_base_url)
+            self.local_available = True
+            self.model = None  # Don't initialize blocking official client
+        else:
+            logger.info(f"[CLOUD] Initializing with OFFICIAL Google Gemini API")
+            self.webai_client = None
+            self.local_available = False
+            # Only initialize official client when NOT using local mode
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel(model_name)
         
         logger.info(f"PromptEngineerAgent initialized with model: {model_name}")
+
     
     async def refine_prompt(
         self,
@@ -71,35 +99,63 @@ class PromptEngineerAgent:
             # 2. Construir prompt del usuario
             user_prompt = self._build_user_prompt(user_input, scene)
             
-            # 3. Llamar a Gemini
-            logger.info(f"Calling Gemini to optimize prompt for scene {scene.get('scene_id')}")
+            # 3. Combine prompts
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
             
-            response = self.model.generate_content(
-                f"{system_prompt}\n\n{user_prompt}",
-                generation_config=genai.GenerationConfig(
-                    temperature=0.7,
-                    top_p=0.9,
-                    max_output_tokens=2048,
+            # 4. Use local WebAI server (forced - no check)
+            if self.use_local and self.webai_client and self.local_available:
+                try:
+                    logger.info(f"[LOCAL] Using LOCAL WebAI-to-API server for scene {scene.get('scene_id')}")
+                    logger.info(f"[MODEL] Model: {self.model_name}, Base URL: {self.webai_client.base_url}")
+                    
+                    response = await self.webai_client.generate_content(
+                        prompt=full_prompt,
+                        model=str(self.model_name),  # Force pure string
+                        temperature=0.7,
+                        top_p=0.9,
+                        max_tokens=2048
+                    )
+                    
+                    response_text = response.text
+                    logger.info("[OK] Local server response received")
+                    
+                except Exception as e:
+                    logger.error(f"[ERROR] Local WebAI-to-API failed: {e}")
+                    # Re-raise the error - don't use blocking fallback
+                    raise
+            else:
+                # 5. Use official Gemini API
+                logger.info(f"[CLOUD] Using OFFICIAL Google Gemini API for scene {scene.get('scene_id')}")
+                
+                response = self.model.generate_content(
+                    full_prompt,
+                    generation_config=genai.GenerationConfig(
+                        temperature=0.7,
+                        top_p=0.9,
+                        max_output_tokens=2048,
+                    )
                 )
-            )
+                response_text = response.text
+                logger.info("[OK] Official API response received")
             
-            # 4. Parsear respuesta
-            optimized_data = self._parse_agent_response(response.text)
+            # 6. Parsear respuesta
+            optimized_data = self._parse_agent_response(response_text)
             
-            # 5. Agregar metadata
+            # 7. Agregar metadata
             optimized_data["optimization_metadata"] = {
                 "agent_model": self.model_name,
                 "target_model": self.target_video_model,
                 "timestamp": datetime.utcnow().isoformat(),
-                "original_input": user_input
+                "original_input": user_input,
+                "used_local_server": self.use_local and self.local_available
             }
             
-            logger.info(f"Prompt optimized successfully. Confidence: {optimized_data.get('validation', {}).get('confidence_score', 0)}")
+            logger.info(f"[OK] Prompt optimized successfully. Confidence: {optimized_data.get('validation', {}).get('confidence_score', 0):.0%}")
             
             return optimized_data
             
         except Exception as e:
-            logger.error(f"Error in refine_prompt: {e}")
+            logger.error(f"[ERROR] Error in refine_prompt: {e}")
             # Fallback: retornar input original
             return {
                 "optimized_action": user_input.get("action", ""),

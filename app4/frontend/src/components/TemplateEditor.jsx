@@ -137,9 +137,15 @@ export default function TemplateEditor() {
             });
 
             if (result.ok) {
+                // Format preview with original and optimized data
                 setOptimizationPreview({
-                    ...result.preview,
                     sceneIndex,
+                    original: {
+                        action: scene.prompt || 'Sin prompt',
+                        emotion: scene.emotion || 'neutral'
+                    },
+                    optimized: result.optimized,
+                    validation: result.validation,
                     optimizedData: result.optimized
                 });
             } else {
@@ -158,11 +164,11 @@ export default function TemplateEditor() {
         const { sceneIndex, optimizedData } = optimizationPreview;
         const newScenes = [...template.scenes];
 
-        // Aplicar prompt optimizado
+        // Aplicar prompt optimizado - use 'action' instead of 'optimized_action'
         newScenes[sceneIndex] = {
             ...newScenes[sceneIndex],
-            prompt: optimizedData.optimized_action,
-            emotion: optimizedData.optimized_emotion || newScenes[sceneIndex].emotion
+            prompt: optimizedData.action || optimizedData.optimized_action || newScenes[sceneIndex].prompt,
+            emotion: optimizedData.emotion || optimizedData.optimized_emotion || newScenes[sceneIndex].emotion
         };
 
         setTemplate({
