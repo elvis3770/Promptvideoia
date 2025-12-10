@@ -1,267 +1,217 @@
-# App4: Video Commercial Generator
+# Prompt Comercial - AI Video Prompt Optimizer
 
-Sistema automatizado de generación de videos comerciales con IA usando Google Veo 3.1.
+Herramienta de optimización de prompts para generación de videos comerciales con IA, usando Gemini para mejorar descripciones y mantener continuidad visual entre escenas.
 
-## 🚀 Inicio Rápido
+## 🎯 Características
 
-### Instalación Automática
+- ✅ **Optimización de prompts con IA** - Mejora automática de descripciones usando Gemini (gratis vía WebAI)
+- ✅ **Análisis de imágenes con contexto** - Gemini analiza tu imagen del producto y combina esa información visual con tu acción deseada
+- ✅ **Optimización consciente de imagen** - Para la primera escena, el sistema recuerda lo que vio en la imagen al optimizar tu prompt
+- ✅ **Continuidad visual automática** - Analiza el último frame de escenas anteriores para mantener coherencia
+- ✅ **Interfaz drag-and-drop** - Sube imágenes fácilmente
+- ✅ **Preview de optimizaciones** - Revisa cambios antes de aplicar
+- ✅ **Modo dual** - WebAI (gratis) para texto + API oficial (visión) para imágenes
 
-```bash
-cd app4
-python setup.py
+## 🏗️ Arquitectura
+
+```
+Frontend (React + Vite)  →  Backend (FastAPI)  →  Gemini AI
+    localhost:5174            localhost:8003         
+                                    ↓
+                        ┌───────────┴───────────┐
+                        ↓                       ↓
+                  WebAI-to-API            Google Gemini API
+                  (Texto - Gratis)        (Imágenes - Paga)
 ```
 
-El script de setup instalará automáticamente:
-- Dependencias de Python (backend)
-- Dependencias de Node.js (frontend)
-- Verificará MongoDB y FFmpeg
-- Creará el archivo .env
+## 📋 Requisitos
 
-### Configuración Manual
+- Python 3.10+
+- Node.js 18+
+- MongoDB (opcional, para persistencia)
+- WebAI-to-API server (para modo gratis)
+- Google Gemini API key (para análisis de imágenes)
 
-Si prefieres configurar manualmente:
+## 🚀 Instalación
 
-**1. Instalar Dependencias**
+### 1. Clonar repositorio
 
 ```bash
-# Backend
+git clone https://github.com/elvis3770/prompt-comercial.git
+cd prompt-comercial
+```
+
+### 2. Backend
+
+```bash
+# Instalar dependencias
 pip install -r requirements.txt
 
-# Frontend
+# Configurar .env
+cp .env.example .env
+# Editar .env con tus credenciales
+```
+
+### 3. Frontend
+
+```bash
 cd frontend
 npm install
-cd ..
 ```
 
-**2. Instalar MongoDB**
+### 4. WebAI-to-API (opcional, para modo gratis)
 
-- **MongoDB Local**: https://www.mongodb.com/try/download/community
-- **MongoDB Atlas (Cloud)**: https://www.mongodb.com/cloud/atlas
+Sigue las instrucciones en: https://github.com/Zai-Kun/WebAI-to-API
 
-**3. Instalar FFmpeg**
+## ⚙️ Configuración
 
-- Descargar desde: https://ffmpeg.org/download.html
-- Agregar al PATH del sistema
+### Archivo `.env`
 
-**4. Configurar Variables de Entorno**
-
-```bash
-copy .env.example .env
-```
-
-Editar `.env`:
 ```env
+# Gemini API Key - Para análisis de imágenes
+GEMINI_API_KEY=tu_api_key_aqui
+
+# WebAI-to-API - Para optimización de texto (gratis)
+USE_LOCAL_GEMINI=true
+WEBAI_API_BASE_URL=http://localhost:6969/v1
+
+# MongoDB (opcional)
 MONGODB_URL=mongodb://localhost:27017
-GOOGLE_API_KEY=tu_api_key_de_google_aqui
+MONGODB_DB_NAME=prompt_comercial
+
+# Puertos
+BACKEND_PORT=8003
+FRONTEND_PORT=5174
 ```
 
-### Verificar Sistema
+## 🎮 Uso
 
-Antes de iniciar, verifica que todo esté configurado:
-
-```bash
-python verify_system.py
-```
-
-### Iniciar Aplicación
+### Iniciar servidores
 
 ```bash
+# Terminal 1: WebAI-to-API (si usas modo gratis)
+cd path/to/WebAI-to-API/src
+python run.py
+
+# Terminal 2: Backend + Frontend
+cd prompt-comercial
 python start.py
 ```
 
-Esto iniciará:
-- **Backend** en http://localhost:8003
-- **Frontend** en http://localhost:5174
+Abre http://localhost:5174 en tu navegador.
 
-Presiona `Ctrl+C` para detener ambos servicios.
+### Flujo de trabajo
 
-## 🎨 Interfaz Web
+1. **Crear escena** - Escribe un prompt básico
+2. **Optimizar** - Click en "Optimizar con IA" (usa WebAI gratis)
+3. **Subir frame** - Arrastra el último frame de la escena anterior
+4. **Analizar** - Gemini analiza la imagen y sugiere cómo empezar la siguiente escena
+5. **Aplicar** - La sugerencia se agrega automáticamente al prompt
+6. **Optimizar nuevamente** - Refina el prompt completo con continuidad
 
-### Dashboard
-- Ver todos tus proyectos
-- Filtrar por estado (Draft, In Progress, Completed)
-- Crear nuevos proyectos
-- Iniciar producciones
-- Ver y descargar videos finales
+## 💰 Costos
 
-### Editor de Templates
-- Crear proyectos visualmente sin escribir JSON
-- Definir información del producto y marca
-- Agregar y editar escenas
-- Previsualizar JSON generado
-- Cargar templates desde archivos
-
-### Monitor de Producción
-- Ver progreso en tiempo real
-- Estado de cada escena
-- Tiempo estimado
-- Notificaciones de errores
-
-### Visor de Proyectos
-- Reproducir video final
-- Ver clips individuales
-- Descargar videos
-- Ver detalles del proyecto
+| Operación | Método | Costo |
+|-----------|--------|-------|
+| Optimizar texto | WebAI-to-API | **Gratis** (cookies) |
+| Analizar imagen | API Oficial | **~$0.002/imagen** |
 
 ## 📁 Estructura del Proyecto
 
 ```
-app4/
+prompt-comercial/
 ├── backend/
 │   ├── core/
-│   │   ├── prompt_generator.py      # Generador de prompts
-│   │   ├── continuity_engine.py     # Motor de continuidad
-│   │   ├── veo_client.py            # Cliente Veo API
-│   │   ├── video_assembler.py       # Ensamblador de videos
-│   │   └── orchestrator.py          # Orquestador principal
-│   ├── db/
-│   │   ├── database.py              # Conexión MongoDB
-│   │   └── repositories.py          # Repositorios CRUD
-│   ├── models/
-│   │   └── models.py                # Modelos Pydantic
+│   │   ├── prompt_engineer_agent.py  # Lógica de optimización
+│   │   ├── webai_client.py           # Cliente WebAI
+│   │   └── prompt_orchestrator.py    # Orquestador
 │   └── utils/
-│       └── frame_extractor.py       # Extractor de frames
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── Dashboard.jsx        # Panel principal
-│       │   ├── TemplateEditor.jsx   # Editor de templates
-│       │   ├── ProjectViewer.jsx    # Visor de proyectos
-│       │   ├── ProductionMonitor.jsx # Monitor de producción
-│       │   └── About.jsx            # Información
+│       │   ├── TemplateEditor.jsx    # Editor de escenas
+│       │   ├── FrameUploader.jsx     # Upload de imágenes
+│       │   └── PromptPreview.jsx     # Preview de optimizaciones
 │       └── api/
-│           └── client.js            # Cliente API
-├── templates/
-│   ├── lve_perfume_commercial.json  # Template complejo (4 escenas)
-│   ├── simple_product_showcase.json # Template simple (2 escenas)
-│   └── brand_story.json             # Template medio (3 escenas)
-├── api.py                           # FastAPI REST API
-├── setup.py                         # Script de instalación
-├── start.py                         # Script de inicio
-├── verify_system.py                 # Script de verificación
-├── test_production.py               # Script de prueba
+│           └── client.js             # Cliente API
+├── api.py                            # FastAPI endpoints
+├── start.py                          # Launcher
 └── requirements.txt
 ```
 
-## 🎬 Cómo Funciona
+## 🔧 Endpoints API
 
-1. **Crea un Template** - Define tu proyecto con escenas y configuración
-2. **Genera Prompts** - El sistema optimiza prompts para cada escena
-3. **Escena 1** - Genera primer clip (con referencias opcionales)
-4. **Extrae Frame** - Obtiene último frame de Escena 1
-5. **Escena 2** - Usa último frame como referencia para continuidad
-6. **Repite** - Proceso continúa para todas las escenas
-7. **Ensambla** - Combina clips en video final de 30s
+### POST `/api/prompts/optimize`
+Optimiza un prompt de texto usando Gemini (vía WebAI).
 
-## 🔧 Componentes Principales
-
-### PromptGenerator
-Genera prompts estructurados con niveles de refinamiento (0-3)
-
-### ContinuityEngine
-Mantiene coherencia visual frame-to-frame entre clips
-
-### VeoClient
-Cliente async para Google Veo 3.1 API
-
-### ProductionOrchestrator
-Coordina todo el proceso de producción
-
-### VideoAssembler
-Ensambla clips con FFmpeg
-
-## 📊 Base de Datos MongoDB
-
-### Collections
-
-- **projects** - Proyectos con escenas y configuración
-- **clips** - Clips generados con metadata
-- **assets** - Imágenes de referencia y frames
-
-## ⚙️ Configuración
-
-### Modo Automático vs Manual
-
-```python
-result = await orchestrator.produce_commercial(
-    project_template=template,
-    auto_mode=True  # False para aprobación manual entre escenas
-)
+**Request:**
+```json
+{
+  "action": "mujer sosteniendo perfume",
+  "emotion": "elegante",
+  "product_tone": "luxury"
+}
 ```
 
-### Niveles de Refinamiento
-
-- **0** - Prompt básico
-- **1** - + Emoción
-- **2** - + Especificaciones de cámara
-- **3** - + Calidad cinemática
-
-## 📝 Crear Tu Propio Template
-
-### Opción 1: Interfaz Web (Recomendado)
-1. Abre http://localhost:5174
-2. Haz clic en "New Project"
-3. Completa el formulario
-4. Agrega escenas
-5. Guarda el proyecto
-
-### Opción 2: JSON Manual
-Copia uno de los templates en `templates/` y modifica:
-- `subject` - Descripción del sujeto principal
-- `product` - Información del producto
-- `scenes` - Define tus escenas (prompt, duración, cámara, etc.)
-- `brand_guidelines` - Mood, colores, estilo
-
-## 🎯 Guía de Uso
-
-Ver [USAGE_GUIDE.md](USAGE_GUIDE.md) para una guía detallada paso a paso.
-
-## ⚠️ Notas Importantes
-
-- Cada clip tarda 2-5 minutos en generarse
-- Video completo de 4 escenas: ~8-20 minutos
-- Requiere FFmpeg instalado
-- Modelo `veo-3.1-generate-preview` necesario para reference images
-- API key de Google Veo 3.1 requerida
-
-## 🆘 Solución de Problemas
-
-**Error de MongoDB**: Verifica que MongoDB esté corriendo
-```bash
-# Windows
-net start MongoDB
-
-# Linux/Mac
-sudo systemctl start mongod
+**Response:**
+```json
+{
+  "ok": true,
+  "optimized": {
+    "action": "Elegant woman gracefully holding luxury perfume...",
+    "emotion": "sophisticated"
+  }
+}
 ```
 
-**Error de API Key**: Revisa que GOOGLE_API_KEY esté configurada en .env
+### POST `/api/prompts/analyze-frame`
+Analiza una imagen para extraer información de continuidad.
 
-**Error de FFmpeg**: Instala FFmpeg y agrégalo al PATH
-```bash
-# Verificar instalación
-ffmpeg -version
+**Request:**
+```json
+{
+  "image_data": "base64_encoded_image",
+  "mime_type": "image/jpeg"
+}
 ```
 
-**Error de dependencias**: Ejecuta setup.py nuevamente
-```bash
-python setup.py
+**Response:**
+```json
+{
+  "ok": true,
+  "analysis": {
+    "subject_position": "center",
+    "camera_angle": "medium shot",
+    "lighting": "soft studio",
+    "colors": ["purple", "red"],
+    "mood": "elegant",
+    "next_scene_suggestion": "Start with close-up of hand..."
+  }
+}
 ```
-
-**Puerto en uso**: Cambia el puerto en api.py (línea 338) o frontend/vite.config.js
-
-## 📚 Recursos Adicionales
-
-- **API Docs**: http://localhost:8003/docs (cuando el backend está corriendo)
-- **Google Veo 3.1**: https://ai.google.dev/gemini-api/docs/veo
-- **MongoDB Docs**: https://www.mongodb.com/docs/
-- **FFmpeg Docs**: https://ffmpeg.org/documentation.html
 
 ## 🤝 Contribuir
 
-Este es un proyecto de demostración. Siéntete libre de modificarlo y adaptarlo a tus necesidades.
+Las contribuciones son bienvenidas. Por favor:
 
-## 📄 Licencia
+1. Fork el proyecto
+2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -m 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
 
-MIT License - Úsalo libremente para tus proyectos.
+## 📝 Licencia
 
+MIT License - ver archivo LICENSE para más detalles.
+
+## 🙏 Agradecimientos
+
+- [WebAI-to-API](https://github.com/Zai-Kun/WebAI-to-API) - Acceso gratis a Gemini
+- [Google Gemini](https://ai.google.dev/) - Modelo de IA
+- FastAPI, React, Vite - Frameworks utilizados
+
+## 📧 Contacto
+
+Elvis - [@elvis3770](https://github.com/elvis3770)
+
+Project Link: https://github.com/elvis3770/prompt-comercial

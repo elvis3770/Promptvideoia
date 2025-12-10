@@ -21,7 +21,7 @@ import os
 import asyncio
 from datetime import datetime
 
-from backend.core.orchestrator import ProductionOrchestrator
+from backend.core.prompt_orchestrator import PromptOrchestrator
 from backend.db.database import db
 from backend.db.repositories import ProjectRepository, ClipRepository
 from backend.models.models import Project, ProjectStatus, ClipStatus
@@ -65,7 +65,7 @@ orchestrator = None
 def get_orchestrator():
     global orchestrator
     if orchestrator is None:
-        orchestrator = ProductionOrchestrator()
+        orchestrator = PromptOrchestrator()
     return orchestrator
 
 # Active productions tracking
@@ -106,9 +106,12 @@ class PromptOptimizationRequest(BaseModel):
     action: str
     emotion: str
     dialogue: Optional[str] = None
+    voice_gender: Optional[str] = "female"  # Add voice gender field
+    negative_prompt: Optional[str] = None  # What NOT to include in video
     product_tone: Optional[str] = None
     scene_type: Optional[str] = "general"
     camera_specs: Optional[dict] = None
+    image_context: Optional[dict] = None  # Visual analysis from image (for first scene)
 
 class PromptValidationRequest(BaseModel):
     """Request model for prompt validation"""
@@ -465,16 +468,25 @@ async def optimize_prompt(data: PromptOptimizationRequest):
         user_input = {
             "action": data.action,
             "emotion": data.emotion,
-            "dialogue": data.dialogue or ""
+            "dialogue": data.dialogue or "",
+            "voice_gender": data.voice_gender or "female"
         }
         
+        
         print("[DEBUG] About to call agent.refine_prompt...")
+        print(f"[DEBUG] dialogue value: '{data.dialogue}'")
+        print(f"[DEBUG] voice_gender: {data.voice_gender}")
+        if data.image_context:
+            print(f"[DEBUG] image_context received: {list(data.image_context.keys())}")
+        else:
+            print("[DEBUG] No image_context provided")
         import sys; sys.stdout.flush()
         
         optimized_data = await agent.refine_prompt(
             user_input=user_input,
             master_template=minimal_template,
-            scene=scene
+            scene=scene,
+            image_context=data.image_context  # Pass visual analysis if available
         )
         
         print("[DEBUG] refine_prompt completed!")
@@ -529,6 +541,259 @@ async def validate_prompt(data: PromptValidationRequest):
         }
         
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
+
+# ============================================================
+# FRAME ANALYSIS FOR SCENE CONTINUITY
+# ============================================================
+
+class FrameAnalysisRequest(BaseModel):
+    """Request for frame analysis"""
+    image_data: str  # Base64 encoded image
+    mime_type: str = "image/jpeg"
+    scene_context: Optional[str] = None  # Optional context about the scene
+    is_first_scene: bool = False  # True if this is the first scene (product image)
+
+@app.post("/api/prompts/analyze-frame")
+async def analyze_frame_for_continuity(data: FrameAnalysisRequest):
+    """
+    Analyze a frame image to extract visual context for scene continuity.
+    
+    Send the last frame of a generated video to get analysis that can be used
+    to create continuity in the next scene's prompt.
+    """
+    try:
+        if not AGENT_AVAILABLE:
+            return {
+                "ok": False,
+                "error": "Frame analysis not available - agent module not loaded"
+            }
+        
+        # Get API key
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            return {
+                "ok": False,
+                "error": "GEMINI_API_KEY not configured"
+            }
+        
+        # Create agent with official API (WebAI doesn't support vision)
+        import google.generativeai as genai
+        genai.configure(api_key=str(api_key))
+        
+        # Use Gemini 2.5 Flash for vision (has available quota)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Different prompts for first scene (product) vs continuity
+        if data.is_first_scene:
+            # FIRST SCENE: Comprehensive scene analysis for commercial video
+            analysis_prompt = """Analyze this commercial scene image in COMPLETE DETAIL for AI video generation.
+
+This is the FIRST SCENE of a commercial video. You must describe EVERYTHING in the image with maximum detail.
+
+ANALYZE AND DESCRIBE:
+
+1. CHARACTER/PERSON (if present):
+   - Physical appearance (age, gender, ethnicity, hair, facial features)
+   - Clothing (color, style, fabric, details)
+   - Pose and body language
+   - Facial expression and emotion
+   - Position in frame (left, right, center, foreground, background)
+
+2. PRODUCT(S):
+   - Type and brand (if visible)
+   - Physical characteristics (shape, size, materials, texture)
+   - Colors and design elements
+   - Packaging details
+   - Position relative to character and camera
+   - How many products and their arrangement
+
+3. ENVIRONMENT/SETTING:
+   - Background (studio, interior, exterior, abstract)
+   - Surface/table/platform details
+   - Props or decorative elements
+   - Spatial composition
+
+4. LIGHTING:
+   - Direction (top, side, front, back)
+   - Quality (soft, hard, diffused, dramatic)
+   - Color temperature (warm, cool, neutral)
+   - Shadows and highlights
+
+5. COLORS:
+   - Dominant colors in the scene
+   - Color palette and harmony
+   - Accent colors
+
+6. CAMERA & COMPOSITION:
+   - Shot type (close-up, medium, wide, etc.)
+   - Angle (eye-level, high, low)
+   - Framing and composition rules used
+
+7. MOOD & STYLE:
+   - Overall emotional tone
+   - Visual style (elegant, modern, playful, dramatic, etc.)
+   - Brand personality conveyed
+
+8. COMPLETE VIDEO PROMPT:
+   Generate a detailed, comprehensive prompt that describes this exact scene as the STARTING POINT for video generation.
+   Include ALL elements: character description, product details, environment, lighting, colors, camera angle, and mood.
+
+Format as JSON:
+{
+    "subject_position": "DETAILED character description and position",
+    "camera_angle": "specific shot type and angle",
+    "lighting": "complete lighting description",
+    "colors": ["color1", "color2", "color3", ...],
+    "mood": "emotional tone and style",
+    "elements": ["character details", "product1", "product2", "environment elements", ...],
+    "video_prompt": "ULTRA-DETAILED prompt describing the ENTIRE scene: character appearance and pose, all products visible, environment, lighting, colors, camera angle, and mood. This should be 3-5 sentences minimum with maximum visual detail."
+}
+
+Example video_prompt format:
+"[Detailed character description: appearance, clothing, pose, expression], positioned [location in frame], [detailed product description with colors and features], arranged [product placement], on [surface description], [complete lighting description], [camera shot and angle], [color palette], [mood and style], [any additional visual details]"
+
+BE EXTREMELY DETAILED. This prompt will be used to generate the video, so include EVERYTHING visible in the image.
+
+Example video_prompt: "Luxury perfume bottle with gold cap and purple liquid, centered on glossy black surface, soft studio lighting from above, medium close-up shot, elegant and sophisticated mood, minimalist aesthetic"
+"""
+        else:
+            # SUBSEQUENT SCENES: Continuity analysis
+            analysis_prompt = """Analyze this video frame for scene continuity:
+
+IMPORTANT: This is the LAST FRAME of the current scene. You need to describe how the FIRST FRAME of the NEXT scene should look to maintain visual continuity.
+
+1. Subject position and pose in this frame
+2. Camera angle and framing in this frame
+3. Lighting conditions
+4. Dominant colors
+5. Mood/emotion conveyed
+6. Key visual elements
+7. How should the FIRST FRAME of the next scene look?
+   - Describe the exact framing and composition to START the next scene
+   - NOT camera movement, but the INITIAL STATE
+   - Example: "Start with close-up of hand holding bottle, same lighting"
+   - NOT: "Dolly in to close-up" (this is movement, not initial state)
+
+Format as JSON:
+{
+    "subject_position": "description",
+    "camera_angle": "shot type",
+    "lighting": "description",
+    "colors": ["color1", "color2"],
+    "mood": "emotional tone",
+    "elements": ["element1", "element2"],
+    "next_scene_suggestion": "How the FIRST FRAME of next scene should look for continuity"
+}"""
+        
+        # Decode base64 image
+        import base64
+        image_bytes = base64.b64decode(data.image_data)
+        
+        # Create image part for Gemini
+        from PIL import Image
+        import io
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Generate content with image
+        response = model.generate_content([analysis_prompt, image])
+        response_text = response.text
+        
+        # Parse JSON from response
+        import json
+        try:
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+            if json_start >= 0 and json_end > json_start:
+                analysis = json.loads(response_text[json_start:json_end])
+            else:
+                analysis = {"raw_analysis": response_text}
+        except:
+            analysis = {"raw_analysis": response_text}
+        
+        # Extract continuity elements using tracker
+        from backend.core.continuity_tracker import ContinuityTracker
+        tracker = ContinuityTracker()
+        tracked_elements = tracker.extract_elements(analysis)
+        
+        # Convert to dict for JSON serialization
+        elements_dict = [
+            {
+                'type': e.type,
+                'description': e.description,
+                'position': e.position,
+                'details': e.details
+            }
+            for e in tracked_elements
+        ]
+        
+        return {
+            "ok": True,
+            "analysis": analysis,
+            "tracked_elements": elements_dict,  # Add tracked elements
+            "used_local_server": False  # Using official API for vision
+        }
+            
+    except Exception as e:
+        print(f"[ERROR] Frame analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Frame analysis error: {str(e)}")
+
+# ============================================================
+# CONTINUITY VALIDATION
+# ============================================================
+
+class ContinuityValidationRequest(BaseModel):
+    """Request for continuity validation between scenes"""
+    previous_elements: List[Dict]
+    current_elements: List[Dict]
+
+@app.post("/api/continuity/validate")
+async def validate_continuity(data: ContinuityValidationRequest):
+    """
+    Validate continuity between two scenes
+    
+    Returns warnings and suggestions for maintaining visual consistency
+    """
+    try:
+        from backend.core.continuity_tracker import ContinuityTracker, ContinuityElement
+        
+        tracker = ContinuityTracker()
+        
+        # Convert dicts back to ContinuityElement objects
+        prev_elements = [
+            ContinuityElement(
+                type=e['type'],
+                description=e['description'],
+                position=e['position'],
+                details=e['details']
+            )
+            for e in data.previous_elements
+        ]
+        
+        curr_elements = [
+            ContinuityElement(
+                type=e['type'],
+                description=e['description'],
+                position=e['position'],
+                details=e['details']
+            )
+            for e in data.current_elements
+        ]
+        
+        # Validate continuity
+        validation_result = tracker.validate_continuity(prev_elements, curr_elements)
+        
+        return {
+            "ok": True,
+            **validation_result
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Continuity validation failed: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
 @app.get("/api/prompts/keywords/{model}")

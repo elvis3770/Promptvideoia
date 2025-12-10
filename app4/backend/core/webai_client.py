@@ -176,6 +176,100 @@ class WebAIClient:
         except Exception as e:
             logger.error(f"[ERROR] Unexpected error in generate_content: {e}")
             raise
+    
+    async def generate_content_with_image(
+        self,
+        prompt: str,
+        image_data: str,
+        mime_type: str = "image/jpeg",
+        model: str = "gemini-2.0-flash-exp",
+        temperature: float = 0.7,
+        max_tokens: int = 2048
+    ) -> 'WebAIResponse':
+        """
+        Generate content with image input for vision analysis.
+        
+        Args:
+            prompt: The text prompt
+            image_data: Base64 encoded image data
+            mime_type: MIME type of the image (image/jpeg, image/png, etc.)
+            model: Model name (must support vision)
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            
+        Returns:
+            WebAIResponse object with analysis text
+        """
+        try:
+            # Build OpenAI-compatible multimodal request
+            request_data = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{image_data}"
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            logger.info(f"[API] Calling WebAI-to-API with image: {self.base_url}/chat/completions")
+            
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    json=request_data,
+                    headers=headers
+                )
+                
+                if response.status_code != 200:
+                    error_text = response.text
+                    logger.error(f"[ERROR] WebAI-to-API vision error {response.status_code}: {error_text}")
+                    raise httpx.HTTPStatusError(
+                        f"WebAI-to-API returned status {response.status_code}: {error_text}",
+                        request=response.request,
+                        response=response
+                    )
+                
+                response_data = response.json()
+                
+                try:
+                    generated_text = response_data["choices"][0]["message"]["content"]
+                except (KeyError, IndexError) as e:
+                    logger.error(f"[ERROR] Invalid vision response format: {response_data}")
+                    raise ValueError(f"Invalid response format from WebAI-to-API: {e}")
+                
+                logger.info(f"[OK] WebAI-to-API vision response received ({len(generated_text)} chars)")
+                
+                return WebAIResponse(
+                    text=generated_text,
+                    raw_response=response_data,
+                    model=model
+                )
+                    
+        except httpx.HTTPError as e:
+            logger.error(f"[ERROR] WebAI-to-API vision request failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"[ERROR] Unexpected error in generate_content_with_image: {e}")
+            raise
 
 
 # Convenience functions for quick access

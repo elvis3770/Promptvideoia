@@ -5,13 +5,16 @@ Actúa como capa de refinamiento entre entrada del usuario y generación de vide
 Supports both:
 - Local WebAI-to-API server (cost-free, no rate limits)
 - Official Google Gemini API (fallback)
+- Image analysis for scene continuity
 """
 from __future__ import annotations
 import google.generativeai as genai
 import json
 import logging
+import base64
 from typing import Optional
 from datetime import datetime
+from pathlib import Path
 
 # Import local WebAI client
 from .webai_client import WebAIClient
@@ -74,12 +77,118 @@ class PromptEngineerAgent:
         
         logger.info(f"PromptEngineerAgent initialized with model: {model_name}")
 
+    def _encode_image_to_base64(self, image_path: str) -> str:
+        """Encode an image file to base64 string"""
+        path = Path(image_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+        
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    
+    def _get_image_mime_type(self, image_path: str) -> str:
+        """Get MIME type from image extension"""
+        ext = Path(image_path).suffix.lower()
+        mime_types = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp"
+        }
+        return mime_types.get(ext, "image/jpeg")
+    
+    async def analyze_frame_for_continuity(self, image_path: str) -> dict:
+        """
+        Analyze a frame image to extract visual context for scene continuity.
+        
+        Args:
+            image_path: Path to the last frame of the previous scene
+            
+        Returns:
+            dict with visual analysis including colors, position, elements, mood
+        """
+        try:
+            image_data = self._encode_image_to_base64(image_path)
+            mime_type = self._get_image_mime_type(image_path)
+            
+            analysis_prompt = """Analyze this video frame and extract the following information for scene continuity:
+
+1. **Subject Position**: Where is the main subject located in the frame? (left, center, right, foreground, background)
+2. **Camera Angle**: What type of shot is this? (close-up, medium, wide, etc.)
+3. **Lighting**: Describe the lighting conditions (soft, dramatic, natural, studio, etc.)
+4. **Color Palette**: What are the dominant colors?
+5. **Mood/Emotion**: What emotional tone does this frame convey?
+6. **Key Elements**: What objects or elements are visible?
+7. **Motion Direction**: If there's implied motion, in what direction?
+
+Respond in JSON format:
+{
+    "subject_position": "description",
+    "camera_angle": "shot type",
+    "lighting": "lighting description",
+    "color_palette": ["color1", "color2", "color3"],
+    "mood": "emotional tone",
+    "key_elements": ["element1", "element2"],
+    "motion_direction": "direction or none",
+    "continuity_notes": "suggestions for smooth transition to next scene"
+}"""
+
+            if self.use_local and self.webai_client:
+                # Use WebAI with vision support
+                response = await self.webai_client.generate_content_with_image(
+                    prompt=analysis_prompt,
+                    image_data=image_data,
+                    mime_type=mime_type,
+                    model=str(self.model_name)
+                )
+                response_text = response.text
+            else:
+                # Use official Gemini API with vision
+                response = self.model.generate_content([
+                    {"mime_type": mime_type, "data": image_data},
+                    analysis_prompt
+                ])
+                response_text = response.text
+            
+            # Parse JSON response
+            try:
+                # Find JSON in response
+                json_start = response_text.find("{")
+                json_end = response_text.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    analysis = json.loads(response_text[json_start:json_end])
+                    logger.info("[OK] Frame analysis completed successfully")
+                    return analysis
+            except json.JSONDecodeError:
+                pass
+            
+            # Return basic structure if parsing fails
+            return {
+                "subject_position": "unknown",
+                "camera_angle": "unknown",
+                "lighting": "unknown",
+                "color_palette": [],
+                "mood": "neutral",
+                "key_elements": [],
+                "motion_direction": "none",
+                "continuity_notes": response_text[:500],
+                "raw_analysis": response_text
+            }
+            
+        except Exception as e:
+            logger.error(f"[ERROR] Frame analysis failed: {e}")
+            return {
+                "error": str(e),
+                "continuity_notes": "Could not analyze frame"
+            }
     
     async def refine_prompt(
         self,
         user_input: dict,
         master_template: dict,
-        scene: dict
+        scene: dict,
+        image_context: dict = None  # Visual analysis from image (for first scene)
     ) -> dict:
         """
         Refina y optimiza un prompt usando el agente de Gemini
@@ -88,6 +197,7 @@ class PromptEngineerAgent:
             user_input: Campos mutables del usuario (dialogue, action, emotion)
             master_template: Template maestro del proyecto
             scene: Datos completos de la escena
+            image_context: Visual analysis from product image (optional, for first scene)
             
         Returns:
             dict con campos optimizados y metadata de optimización
@@ -96,8 +206,8 @@ class PromptEngineerAgent:
             # 1. Construir prompt del sistema para el agente
             system_prompt = self._build_system_prompt(master_template, scene)
             
-            # 2. Construir prompt del usuario
-            user_prompt = self._build_user_prompt(user_input, scene)
+            # 2. Construir prompt del usuario (with image context if available)
+            user_prompt = self._build_user_prompt(user_input, scene, image_context)
             
             # 3. Combine prompts
             full_prompt = f"{system_prompt}\n\n{user_prompt}"
@@ -230,6 +340,14 @@ KEYWORDS EFECTIVAS PARA {self.target_video_model.upper()}:
 - Composición: "rule of thirds", "symmetrical composition", "leading lines"
 - Estilo: "luxury commercial aesthetic", "editorial style", "fashion photography"
 
+MANEJO DE DIÁLOGOS (MUY IMPORTANTE):
+Si el usuario proporcionó un diálogo:
+1. DEBES incluirlo en "optimized_dialogue" EXACTAMENTE como está
+2. NO traduzcas ni modifiques el diálogo
+3. El diálogo debe aparecer en "optimized_action" con el formato:
+   "speaks: '[diálogo exacto]' with [female/male] voice, Argentine accent"
+4. Si NO hay diálogo, deja "optimized_dialogue" vacío
+
 FORMATO DE RESPUESTA:
 Debes responder ÚNICAMENTE con un objeto JSON válido (sin markdown, sin backticks) con esta estructura exacta:
 {{
@@ -254,19 +372,79 @@ IMPORTANTE:
 
         return system_prompt
     
-    def _build_user_prompt(self, user_input: dict, scene: dict) -> str:
+    def _build_user_prompt(self, user_input: dict, scene: dict, image_context: dict = None) -> str:
         """
         Construye el prompt del usuario con los datos a optimizar
         """
         action = user_input.get("action", scene.get("action_details", ""))
         emotion = user_input.get("emotion", scene.get("emotion", ""))
         dialogue = user_input.get("dialogue", "")
+        voice_gender = user_input.get("voice_gender", "female")  # Default to female
         
+        # Build base prompt
         user_prompt = f"""ENTRADA DEL USUARIO PARA OPTIMIZAR:
 
 Acción: {action}
 Emoción: {emotion}
 Diálogo: {dialogue if dialogue else "N/A"}
+Voz: {"Mujer" if voice_gender == "female" else "Hombre"} (acento argentino)"""
+
+        # Add visual context if this is first scene with image analysis
+        if image_context:
+            # Define voice text for use in prompt
+            voice_gender_text = "female" if voice_gender == "female" else "male"
+            
+            user_prompt += f"""
+
+CONTEXTO VISUAL DE LA IMAGEN (PRODUCTO/ESCENA INICIAL):
+Esta es la imagen que se usará como referencia para generar el video.
+Debes combinar esta información visual con la acción/emoción/diálogo del usuario.
+
+Análisis de la imagen:
+- Posición del sujeto: {image_context.get('subject_position', 'N/A')}
+- Ángulo de cámara sugerido: {image_context.get('camera_angle', 'N/A')}
+- Iluminación: {image_context.get('lighting', 'N/A')}
+- Colores dominantes: {', '.join(image_context.get('colors', []))}
+- Mood/emoción: {image_context.get('mood', 'N/A')}
+- Elementos clave: {', '.join(image_context.get('elements', []))}
+
+IMPORTANTE - CÓMO COMBINAR IMAGEN + ACCIÓN:
+
+1. ESTADO INICIAL (de la imagen):
+   Describe cómo se ve la escena AL INICIO, exactamente como está en la imagen.
+   
+2. ACCIÓN DEL USUARIO (movimiento/gesto):
+   Incorpora la acción específica que el usuario describió.
+   Mantén los detalles exactos: qué mano usa, qué objeto toma, hacia dónde mira, etc.
+   
+   Ejemplos de acciones detalladas:
+   - "toma el perfume negro con la mano izquierda" → mantén "mano izquierda" y "perfume negro"
+   - "sonríe y lo muestra a cámara" → mantén el gesto específico
+   - "lo deja con los otros perfumes y sale de cuadro" → mantén la secuencia exacta
+   
+3. DIÁLOGO (si existe):
+   Incluye el diálogo EXACTAMENTE como está, sin cambios.
+   Especifica que se dice con voz {voice_gender_text} y acento argentino.
+
+4. DETALLES TÉCNICOS:
+   Agrega keywords cinematográficas, especificaciones de cámara, iluminación profesional.
+
+ESTRUCTURA DEL PROMPT OPTIMIZADO:
+"[Descripción inicial de la imagen: personaje, productos, ambiente], 
+[ACCIÓN ESPECÍFICA del usuario con todos los detalles], 
+speaks: '[diálogo exacto]' with {voice_gender_text} voice, Argentine accent,
+[especificaciones técnicas: cámara, iluminación, mood]"
+
+Ejemplo completo:
+"Woman in red dress standing behind five LVE perfume bottles on glossy white surface, 
+reaches with her left hand and picks up the black perfume bottle, 
+lifts it to eye level showing it to camera with confident smile,
+speaks: 'Este es mi favorito' with female voice, Argentine accent,
+medium shot, soft studio lighting from above, elegant and sophisticated mood, 
+4K quality, cinematic commercial aesthetic"
+"""
+
+        user_prompt += """
 
 Por favor, optimiza estos campos aplicando todas las tareas descritas en el prompt del sistema.
 Recuerda responder ÚNICAMENTE con el objeto JSON, sin texto adicional."""

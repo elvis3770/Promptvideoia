@@ -1,0 +1,191 @@
+.frame-uploader {
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 1rem;
+    border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.frame-uploader h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary, #333);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.upload-zone {
+    border: 2px dashed var(--border-color, #ccc);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--bg-primary, #fff);
+}
+
+.upload-zone:hover {
+    border-color: var(--primary-color, #8b5cf6);
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.upload-zone.dragging {
+    border-color: var(--primary-color, #8b5cf6);
+    background: rgba(139, 92, 246, 0.1);
+    transform: scale(1.02);
+}
+
+.upload-zone svg {
+    color: var(--text-muted, #888);
+    margin-bottom: 0.5rem;
+}
+
+.upload-zone p {
+    margin: 0.5rem 0 0.25rem 0;
+    color: var(--text-primary, #333);
+    font-weight: 500;
+}
+
+.upload-zone span {
+    font-size: 0.8rem;
+    color: var(--text-muted, #888);
+}
+
+.preview-container {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.frame-preview {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.btn-clear {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-clear:hover {
+    background: rgba(220, 38, 38, 0.9);
+}
+
+.analyzing-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: var(--primary-color, #8b5cf6);
+}
+
+.analyzing-indicator .spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(220, 38, 38, 0.1);
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+}
+
+.analysis-results {
+    margin-top: 1rem;
+    background: var(--bg-primary, #fff);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid var(--success-color, #22c55e);
+}
+
+.analysis-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--success-color, #22c55e);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+.analysis-item {
+    background: var(--bg-secondary, #f8f9fa);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+
+.analysis-item label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted, #888);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.analysis-item span {
+    font-size: 0.85rem;
+    color: var(--text-primary, #333);
+}
+
+.analysis-item.colors {
+    grid-column: span 2;
+}
+
+.color-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.color-tag {
+    background: linear-gradient(135deg, var(--primary-color, #8b5cf6), #a78bfa);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+
+.analysis-item.suggestion {
+    grid-column: span 2;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(167, 139, 250, 0.1));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.analysis-item.suggestion p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-primary, #333);
+    line-height: 1.4;
+}

@@ -1,0 +1,149 @@
+.continuity-validator {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.validator-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.validator-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.status-valid {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #28a745;
+    font-weight: 500;
+}
+
+.status-invalid {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.warnings-section,
+.suggestions-section {
+    margin-bottom: 1rem;
+}
+
+.warnings-section h5,
+.suggestions-section h5 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.warning-item {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    background: white;
+}
+
+.warning-item.severity-high {
+    border-left: 3px solid #dc3545;
+}
+
+.warning-item.severity-medium {
+    border-left: 3px solid #ffc107;
+}
+
+.warning-item.severity-low {
+    border-left: 3px solid #17a2b8;
+}
+
+.severity-high {
+    color: #dc3545;
+}
+
+.severity-medium {
+    color: #ffc107;
+}
+
+.severity-low {
+    color: #17a2b8;
+}
+
+.warning-content {
+    flex: 1;
+}
+
+.warning-content strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #333;
+    text-transform: capitalize;
+}
+
+.warning-content p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.suggestions-section ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.suggestions-section li {
+    margin-bottom: 0.5rem;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.elements-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.comparison-column h5 {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+.element-card {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.element-type {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: #e7f3ff;
+    color: #0066cc;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    text-transform: capitalize;
+}
+
+.element-card p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #495057;
+}

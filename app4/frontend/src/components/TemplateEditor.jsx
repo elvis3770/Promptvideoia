@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save, Upload, Eye, Sparkles } from 'lucide-react';
 import { createProject, optimizePrompt } from '../api/client';
 import PromptPreview from './PromptPreview';
+import FrameUploader from './FrameUploader';
+import ContinuityValidator from './ContinuityValidator';
 import './TemplateEditor.css';
 
 export default function TemplateEditor() {
@@ -14,6 +16,7 @@ export default function TemplateEditor() {
     const [optimizationPreview, setOptimizationPreview] = useState(null);
     const [optimizingScene, setOptimizingScene] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [imageAnalysis, setImageAnalysis] = useState({});  // Store image analysis per scene
     const [template, setTemplate] = useState({
         name: '',
         description: '',
@@ -129,12 +132,22 @@ export default function TemplateEditor() {
         setLoading(true);
 
         try {
-            const result = await optimizePrompt({
+            // Prepare optimization request
+            const optimizationRequest = {
                 action: scene.prompt || '',
                 emotion: scene.emotion || 'neutral',
+                dialogue: scene.dialogue || '',
+                voice_gender: scene.voice_gender || 'female',
                 product_tone: template.brand_guidelines.mood || 'professional',
                 scene_type: 'general'
-            });
+            };
+
+            // Add image context if this is first scene and we have analysis
+            if (sceneIndex === 0 && imageAnalysis[0]) {
+                optimizationRequest.image_context = imageAnalysis[0];
+            }
+
+            const result = await optimizePrompt(optimizationRequest);
 
             if (result.ok) {
                 // Format preview with original and optimized data
@@ -404,6 +417,25 @@ export default function TemplateEditor() {
                                                 rows="3"
                                             />
                                         </div>
+                                        <div className="form-group full-width">
+                                            <label>Diálogo (Español Argentino)</label>
+                                            <textarea
+                                                value={scene.dialogue || ''}
+                                                onChange={(e) => updateScene(index, 'dialogue', e.target.value)}
+                                                placeholder="Ej: 'Este es el aroma de la elegancia, che'"
+                                                rows="2"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Voz</label>
+                                            <select
+                                                value={scene.voice_gender || 'female'}
+                                                onChange={(e) => updateScene(index, 'voice_gender', e.target.value)}
+                                            >
+                                                <option value="female">Mujer</option>
+                                                <option value="male">Hombre</option>
+                                            </select>
+                                        </div>
                                         <div className="form-group">
                                             <label>Emoción</label>
                                             <select
@@ -417,6 +449,15 @@ export default function TemplateEditor() {
                                                 <option value="mystery">Misterio</option>
                                                 <option value="luxury">Lujo</option>
                                             </select>
+                                        </div>
+                                        <div className="form-group full-width">
+                                            <label>Prompt Negativo (qué NO quieres)</label>
+                                            <textarea
+                                                value={scene.negative_prompt || ''}
+                                                onChange={(e) => updateScene(index, 'negative_prompt', e.target.value)}
+                                                placeholder="Ej: no text, no blurry, no distortions, no watermark"
+                                                rows="2"
+                                            />
                                         </div>
                                         <div className="form-group">
                                             <label>Movimiento de Cámara</label>
@@ -469,6 +510,42 @@ export default function TemplateEditor() {
                                             onAccept={applyOptimization}
                                             onReject={rejectOptimization}
                                             loading={false}
+                                        />
+                                    )}
+
+                                    {/* Frame Uploader para referencia visual */}
+                                    <FrameUploader
+                                        isFirstScene={index === 0}
+                                        onAnalysisComplete={(analysis) => {
+                                            // Save analysis for optimization
+                                            setImageAnalysis(prev => ({
+                                                ...prev,
+                                                [index]: analysis
+                                            }));
+
+                                            if (index === 0) {
+                                                // First scene: DON'T replace prompt field
+                                                // Keep it empty so user can write their action
+                                                // The video_prompt is saved in imageAnalysis and will be used during optimization
+                                                console.log('[First Scene] video_prompt saved in imageAnalysis, Prompt field kept empty for user action');
+                                            } else {
+                                                // Subsequent scenes: Add continuity suggestion
+                                                const continuityContext = analysis.next_scene_suggestion || '';
+                                                const currentPrompt = scene.prompt || '';
+                                                if (continuityContext && !currentPrompt.includes('[CONTINUITY]')) {
+                                                    updateScene(index, 'prompt',
+                                                        `[CONTINUITY: ${continuityContext}] ${currentPrompt}`
+                                                    );
+                                                }
+                                            }
+                                        }}
+                                    />
+
+                                    {/* Continuity Validator for scenes 2+ */}
+                                    {index > 0 && imageAnalysis[index - 1] && imageAnalysis[index] && (
+                                        <ContinuityValidator
+                                            previousElements={imageAnalysis[index - 1].tracked_elements || []}
+                                            currentElements={imageAnalysis[index].tracked_elements || []}
                                         />
                                     )}
                                 </div>

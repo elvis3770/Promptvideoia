@@ -1,0 +1,88 @@
+================================================================================
+                    INSTRUCCIONES DE INSTALACIÓN - PROPY
+              (Video-generation-Veo-3.1 / AI Prompt Optimizer)
+================================================================================
+
+REQUISITOS PREVIOS:
+-------------------
+1. Python 3.10 o superior
+2. Node.js 18+ y npm
+3. Git (opcional, para clonar desde GitHub)
+
+================================================================================
+PASO 1: EXTRAER EL ARCHIVO ZIP
+================================================================================
+Descomprime backup_veo31.zip en una carpeta llamada "propy" o donde prefieras.
+
+================================================================================
+PASO 2: INSTALAR DEPENDENCIAS DE PYTHON (BACKEND)
+================================================================================
+Abre PowerShell/CMD en la carpeta del proyecto y ejecuta:
+
+    cd propy
+    pip install -r requirements.txt
+    
+    cd app4
+    pip install -r requirements.txt
+
+================================================================================
+PASO 3: CONFIGURAR ARCHIVO .ENV
+================================================================================
+1. En la carpeta "app4", copia .env.example a .env:
+   
+       copy .env.example .env
+
+2. Edita el archivo .env y configura:
+   
+   - GEMINI_API_KEY=tu_api_key_de_google     (obtener de https://aistudio.google.com/)
+   - WEBAI_BASE_URL=http://localhost:8001    (URL del servidor WebAI-to-API)
+
+================================================================================
+PASO 4: INSTALAR DEPENDENCIAS DEL FRONTEND
+================================================================================
+    cd app4\frontend
+    npm install
+
+================================================================================
+PASO 5: EJECUTAR LA APLICACIÓN
+================================================================================
+
+OPCIÓN A - Iniciar todo junto:
+    cd app4
+    python start.py
+
+OPCIÓN B - Iniciar por separado:
+    
+    Terminal 1 (Backend):
+        cd app4
+        python -m uvicorn api:app --host 0.0.0.0 --port 8004 --reload
+    
+    Terminal 2 (Frontend):
+        cd app4\frontend
+        npm run dev
+
+================================================================================
+PASO 6: ACCEDER A LA APLICACIÓN
+================================================================================
+Abre el navegador en: http://localhost:5173
+
+================================================================================
+NOTAS IMPORTANTES:
+================================================================================
+- Este proyecto requiere WebAI-to-API corriendo para funcionar correctamente
+- Asegúrate de que WebAI-to-API esté corriendo en el puerto 8001 antes de usar
+- La API del backend corre en el puerto 8004
+
+================================================================================
+ESTRUCTURA DEL PROYECTO:
+================================================================================
+propy/
+├── app4/                    <- Aplicación principal
+│   ├── api.py              <- API FastAPI (puerto 8004)
+│   ├── start.py            <- Script de inicio
+│   ├── frontend/           <- React + Vite (puerto 5173)
+│   └── backend/            <- Lógica del agente AI
+├── requirements.txt        <- Dependencias Python principales
+└── .env.example           <- Plantilla de configuración
+
+================================================================================
